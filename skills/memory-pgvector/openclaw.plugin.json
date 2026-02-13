@@ -1,0 +1,105 @@
+{
+  "id": "memory-pgvector",
+  "kind": "memory",
+  "uiHints": {
+    "database.host": {
+      "label": "PostgreSQL Host",
+      "placeholder": "localhost",
+      "help": "PostgreSQL server hostname"
+    },
+    "database.port": {
+      "label": "Port",
+      "placeholder": "5432",
+      "help": "PostgreSQL server port"
+    },
+    "database.database": {
+      "label": "Database Name",
+      "placeholder": "openclaw_memory",
+      "help": "Database name for memory storage"
+    },
+    "database.user": {
+      "label": "Username",
+      "placeholder": "postgres",
+      "help": "PostgreSQL username"
+    },
+    "database.password": {
+      "label": "Password",
+      "sensitive": true,
+      "help": "PostgreSQL password (or use ${PGPASSWORD})"
+    },
+    "embedding.provider": {
+      "label": "Embedding Provider",
+      "help": "Choose embedding provider: openai, e5-local, or zai"
+    },
+    "embedding.apiKey": {
+      "label": "OpenAI/Z.AI API Key",
+      "sensitive": true,
+      "placeholder": "sk-...",
+      "help": "API key for embeddings"
+    },
+    "embedding.model": {
+      "label": "Embedding Model",
+      "placeholder": "text-embedding-3-small",
+      "help": "Embedding model to use"
+    },
+    "embedding.e5Endpoint": {
+      "label": "E5 Endpoint",
+      "placeholder": "http://127.0.0.1:8765",
+      "advanced": true,
+      "help": "Local E5 embedding service URL"
+    },
+    "autoCapture": {
+      "label": "Auto-Capture",
+      "help": "Automatically capture important information from conversations"
+    },
+    "autoRecall": {
+      "label": "Auto-Recall",
+      "help": "Automatically inject relevant memories into context"
+    },
+    "sessionSummaries": {
+      "label": "Session Summaries",
+      "help": "Store session summaries with GLM-4.7"
+    },
+    "zaiApiKey": {
+      "label": "Z.AI API Key",
+      "sensitive": true,
+      "placeholder": "...",
+      "help": "Z.AI API key for GLM-4.7 summarization"
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "database": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host": { "type": "string" },
+          "port": { "type": "number" },
+          "database": { "type": "string" },
+          "user": { "type": "string" },
+          "password": { "type": "string" },
+          "ssl": { "type": "boolean" }
+        },
+        "required": ["host", "database", "user"]
+      },
+      "embedding": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "provider": { "type": "string", "enum": ["openai", "e5-local", "zai"] },
+          "apiKey": { "type": "string" },
+          "model": { "type": "string" },
+          "e5Endpoint": { "type": "string" }
+        },
+        "required": ["provider"]
+      },
+      "autoCapture": { "type": "boolean" },
+      "autoRecall": { "type": "boolean" },
+      "sessionSummaries": { "type": "boolean" },
+      "zaiApiKey": { "type": "string" }
+    },
+    "required": ["database", "embedding"]
+  }
+}
