@@ -401,15 +401,15 @@ function createEmbeddingProvider(
 // ============================================================================
 
 const MEMORY_TRIGGERS = [
-  /zapamatuj si|pamatuj|remember/i,
-  /preferuji|radši|nechci|prefer/i,
-  /rozhodli jsme|budeme používat|decided|will use/i,
+  /zapamatuj|запомни|remember/i,
+  /предпочитаю|люблю|ненавижу|хочу|нужно|preferuji|radši|nechci|prefer/i,
+  /решили|будем использовать|rozhodli jsme|budeme používat|decided|will use/i,
   /\+\d{10,}/,
   /[\w.-]+@[\w.-]+\.\w+/,
-  /můj\s+\w+\s+je|je\s+můj/i,
-  /my\s+\w+\s+is|is\s+my/i,
-  /i (like|prefer|hate|love|want|need)/i,
-  /always|never|important/i,
+  /мой\s+\w+\s+это|это\s+мой|můj\s+\w+\s+je|je\s+můj|my\s+\w+\s+is|is\s+my/i,
+  /я (люблю|предпочитаю|ненавижу|хочу|нуждаюсь)|i (like|prefer|hate|love|want|need)/i,
+  /всегда|никогда|важно|always|never|important/i,
+  /важная информация|important info/i,
 ];
 
 function shouldCapture(text: string): boolean {
@@ -423,6 +423,13 @@ function shouldCapture(text: string): boolean {
     return false;
   }
   if (text.includes("**") && text.includes("\n-")) {
+    return false;
+  }
+  const lower = text.toLowerCase();
+  if (lower.includes("запомнил") || lower.includes("сохраняю") || lower.includes("saved")) {
+    return false;
+  }
+  if (lower.includes("conversation info") || lower.includes("untrusted metadata")) {
     return false;
   }
   const emojiCount = (text.match(/[\u{1F300}-\u{1F9FF}]/gu) || []).length;
