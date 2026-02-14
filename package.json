@@ -1,13 +1,14 @@
 {
   "name": "memory-pgvector",
-  "version": "1.0.0",
-  "description": "PostgreSQL + pgvector long-term memory for OpenClaw",
+  "version": "1.1.0",
+  "description": "OpenClaw Memory Plugin with PostgreSQL + pgvector - Full conversation tracking with semantic search",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "pg": "^8.13.0",
@@ -24,6 +25,29 @@
     "@sinclair/typebox": ">=0.33.0",
     "openclaw": ">=1.0.0"
   },
-  "keywords": ["openclaw", "memory", "pgvector", "postgresql"],
-  "license": "MIT"
+  "keywords": [
+    "openclaw",
+    "memory",
+    "pgvector",
+    "postgresql",
+    "embeddings",
+    "semantic-search",
+    "ai",
+    "llm",
+    "rag",
+    "vector-database"
+  ],
+  "author": "sdamarketing",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sdamarketing/openclaw-memory-pgvector.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sdamarketing/openclaw-memory-pgvector/issues"
+  },
+  "homepage": "https://github.com/sdamarketing/openclaw-memory-pgvector#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }
