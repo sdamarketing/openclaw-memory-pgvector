@@ -72,7 +72,7 @@ async function updateUserProfile(userId: string, profile: UserProfile) {
     content: `User's name is ${profile.name}`,
     memoryType: 'fact',
     importance: 0.9,
-    metadata: { field: 'name' }
+    metadata: { field: 'name', userId }
   });
 
   // Store timezone
@@ -80,7 +80,7 @@ async function updateUserProfile(userId: string, profile: UserProfile) {
     content: `User is in ${profile.timezone} timezone`,
     memoryType: 'fact',
     importance: 0.7,
-    metadata: { field: 'timezone' }
+    metadata: { field: 'timezone', userId }
   });
 
   // Store preferences
@@ -88,7 +88,8 @@ async function updateUserProfile(userId: string, profile: UserProfile) {
     await memory_store({
       content: `User prefers ${key}: ${value}`,
       memoryType: 'preference',
-      importance: 0.6
+      importance: 0.6,
+      metadata: { userId }
     });
   }
 }
@@ -97,7 +98,8 @@ async function updateUserProfile(userId: string, profile: UserProfile) {
 async function getUserContext(userId: string): Promise<string> {
   const results = await search_context({
     query: 'user profile information',
-    limit: 10
+    limit: 10,
+    userId  // Scope search to this user
   });
   
   return results.map(r => r.content).join('\n');
@@ -248,6 +250,9 @@ class MemoryService {
   }
 
   async search(query: string) {
+    // Compute embedding from query
+    const queryEmbedding = await getEmbedding(query);
+    
     // ALWAYS filter by user_id
     const result = await pool.query(`
       SELECT * FROM search_memories(
@@ -256,7 +261,7 @@ class MemoryService {
         10,
         0.25
       )
-    `, [queryEmbedding, this.userId]);
+    `, [`[${queryEmbedding.join(',')}]`, this.userId]);
     
     return result.rows;
   }
@@ -350,7 +355,7 @@ const pool = new Pool({
   host: 'localhost',
   database: 'openclaw_memory',
   user: 'openclaw',
-  password: 'password'
+  password: process.env.PG_PASSWORD  // Use env variable, never hardcode!
 });
 
 async function getRelevantContext(query: string, userId: string) {

@@ -40,8 +40,8 @@ host    all             all             0.0.0.0/0       reject
 ```
 
 ```sql
--- Force SSL
-ALTER USER openclaw SET ssl = true;
+-- SSL: configure server (pg_hba.conf hostssl) and client (sslmode=require)
+-- Note: PostgreSQL does not have per-user SSL setting
 ```
 
 ### 4. Least Privilege Principle
@@ -76,12 +76,13 @@ Enable PostgreSQL encryption:
 -- Requires pgcrypto extension
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- Encrypt sensitive metadata
+-- Encrypt sensitive metadata (use environment variable for key!)
 INSERT INTO memories (content, metadata)
 VALUES (
   'User prefers dark mode',
-  pgp_sym_encrypt('{"sensitive": "data"}', 'encryption-key')::jsonb
+  pgp_sym_encrypt('{"sensitive": "data"}', current_setting('app.encryption_key'))::jsonb
 );
+-- Note: Store encryption key in env/secrets manager, never in code!
 ```
 
 ### 3. GDPR Compliance

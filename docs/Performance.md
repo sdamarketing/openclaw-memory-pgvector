@@ -166,6 +166,12 @@ CREATE INDEX idx_cache_embedding ON embedding_cache
 
 ### Query Performance
 
+**Note:** `pg_stat_statements` extension is required. Enable it first:
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+```
+Also add to `postgresql.conf`: `shared_preload_libraries = 'pg_stat_statements'` and restart PostgreSQL.
+
 ```sql
 -- Check slow queries
 SELECT query, mean_exec_time, calls 
