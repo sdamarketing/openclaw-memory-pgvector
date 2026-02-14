@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Performance Tuning Guide** - HNSW index optimization, query tuning, benchmarks
+- **Security Best Practices** - Database security, GDPR compliance, audit logging
+- **Examples Documentation** - Code examples for common use cases
 - Wiki documentation in English and Russian
 - Comprehensive installation guide
 - Configuration reference
