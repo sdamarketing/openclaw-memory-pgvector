@@ -87,13 +87,14 @@ User Message (Telegram/CLI/Web)
 
 ### Prerequisites
 
-- OpenClaw installed (\`npm install -g openclaw\`)
+- OpenClaw installed (`npm install -g openclaw`)
 - PostgreSQL 16+ with pgvector extension
 - Python 3.10+ (for E5 embeddings)
+- (Optional) Proxy server for ElevenLabs TTS in restricted regions
 
 ### Quick Start
 
-\`\`\`bash
+```bash
 # 1. Clone repository
 git clone https://github.com/aister-khmara/openclaw-memory-pgvector.git
 cd openclaw-memory-pgvector
@@ -112,13 +113,50 @@ python3 e5-server.py &
 
 # 6. Configure OpenClaw
 openclaw config
-\`\`\`
+```
 
 📖 **[Full Installation Guide →](https://github.com/aister-khmara/openclaw-memory-pgvector/wiki/Installation)**
 
+### Systemd Services (Recommended)
+
+For production use, install as systemd services:
+
+```bash
+# Copy service files
+mkdir -p ~/.config/systemd/user/
+cp systemd/*.service ~/.config/systemd/user/
+
+# Enable services
+systemctl --user enable e5-embedding
+systemctl --user enable openclaw-gateway
+
+# Start services
+systemctl --user start e5-embedding
+systemctl --user start openclaw-gateway
+
+# Enable autostart
+loginctl enable-linger
+```
+
+### Proxy Setup (for restricted regions)
+
+If ElevenLabs API is blocked in your region:
+
+```bash
+# Setup proxy environment
+source setup-proxy.sh
+
+# Or add to ~/.bashrc
+export NO_PROXY="localhost,127.0.0.1,0.0.0.0"
+export HTTP_PROXY="http://127.0.0.1:10809"
+export HTTPS_PROXY="http://127.0.0.1:10809"
+```
+
+⚠️ **Important**: Always set `NO_PROXY` to exclude localhost, or E5 server connection will fail.
+
 ## CLI Commands
 
-\`\`\`bash
+```bash
 # View statistics
 openclaw pgmem stats
 
@@ -127,33 +165,35 @@ openclaw pgmem search "your query" --limit 5
 
 # Count memories
 openclaw pgmem count --user <user_id>
-\`\`\`
+```
 
-## Roadmap
+## Troubleshooting
 
-- [ ] Support for SQLite with vector extension
-- [ ] Web UI for memory management
-- [ ] Support for more embedding providers (Cohere, HuggingFace)
-- [ ] Batch processing for large files
-- [ ] Export/Import memory data
-- [ ] Memory sharing between sessions
-- [ ] Advanced analytics dashboard
+### Common Issues
 
-See [GitHub Issues](https://github.com/aister-khmara/openclaw-memory-pgvector/issues) for more details.
+| Issue | Solution |
+|-------|----------|
+| `fetch failed` | Set `NO_PROXY=localhost,127.0.0.1` before starting gateway |
+| `expected 1024 dimensions, not 384` | Use `multilingual-e5-large` (1024 dims), not `e5-small` |
+| `must be owner of table` | Run ownership grants in PostgreSQL |
+| E5 server crashes | Check RAM (~2GB needed), check logs |
+| Memory not captured | Verify `autoCapture: true` and E5 server running |
+| TTS not reading Russian | Use `eleven_multilingual_v2` or `eleven_flash_v2_5` model |
 
----
+### Health Check Commands
 
-## Contributing
+```bash
+# E5 server
+curl http://127.0.0.1:8765/health
 
-**Contributions are welcome!** 🎉
+# Gateway
+curl http://127.0.0.1:18789/health
 
-### How to Contribute
+# Memory stats
+openclaw pgmem stats
+```
 
-1. **Fork the repository** on GitHub
-2. **Create a feature branch** for your changes
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
+📖 **[Full Troubleshooting Guide →](https://github.com/aister-khmara/openclaw-memory-pgvector/wiki/Troubleshooting)**
 3. **Make your changes** and commit with clear messages
    ```bash
    git commit -m "Add: Something amazing"

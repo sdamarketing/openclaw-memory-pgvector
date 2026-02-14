@@ -1,0 +1,15 @@
+[Unit]
+Description=E5 Embedding Server for OpenClaw Memory Plugin
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/.openclaw
+ExecStart=/usr/bin/python3 %h/.openclaw/e5-server.py
+Restart=always
+RestartSec=10
+Environment=NO_PROXY=localhost,127.0.0.1
+Environment=HF_TOKEN=%h/.config/hf_token
+
+[Install]
+WantedBy=default.target

@@ -100,6 +100,9 @@ pip3 install flask sentence-transformers --break-system-packages
 mkdir -p ~/.openclaw
 cp e5-server.py ~/.openclaw/
 
+# (Optional) Set HuggingFace token for faster downloads
+export HF_TOKEN="your-hf-token-here"
+
 # Start server in background
 nohup python3 ~/.openclaw/e5-server.py > ~/.openclaw/e5-server.log 2>&1 &
 
@@ -110,6 +113,38 @@ sleep 60
 curl http://127.0.0.1:8765/health
 # Expected: {"status":"ok","model":"intfloat/multilingual-e5-large","dimension":1024}
 ```
+
+### Step 3.1: Setup Systemd Services (Recommended)
+
+```bash
+# Copy service files
+mkdir -p ~/.config/systemd/user/
+cp systemd/*.service ~/.config/systemd/user/
+
+# Enable services
+systemctl --user enable e5-embedding
+systemctl --user enable openclaw-gateway
+
+# Start services
+systemctl --user start e5-embedding
+systemctl --user start openclaw-gateway
+
+# Enable autostart (allows services to run without login)
+loginctl enable-linger
+```
+
+### Step 3.2: Proxy Setup (if needed)
+
+If you need a proxy for external APIs but want to keep local connections direct:
+
+```bash
+# Add to ~/.bashrc
+export NO_PROXY="localhost,127.0.0.1,0.0.0.0"
+export HTTP_PROXY="http://127.0.0.1:10809"
+export HTTPS_PROXY="http://127.0.0.1:10809"
+```
+
+⚠️ **CRITICAL**: `NO_PROXY` is required! Without it, the E5 server connection will fail because the proxy will intercept localhost requests.
 
 ### Step 4: Configure OpenClaw
 
@@ -197,6 +232,25 @@ E5 server not running. Start with `python3 ~/.openclaw/e5-server.py &`
 
 ### "Connection refused" on port 8765
 Wait longer for model to load, or check `~/.openclaw/e5-server.log` for errors.
+
+### "memory-pgvector: capture failed: TypeError: fetch failed"
+Proxy is intercepting localhost connections. Set `NO_PROXY=localhost,127.0.0.1,0.0.0.0`.
+
+### E5 server crashes
+- Check available RAM (~2GB required for model)
+- Check `~/.openclaw/e5-server.log` for errors
+- Restart with systemd: `systemctl --user restart e5-embedding`
+
+### Memory not being captured
+1. Verify `autoCapture: true` in config
+2. Check E5 server is running: `curl http://127.0.0.1:8765/health`
+3. Check gateway logs: `tail -f /tmp/openclaw/openclaw-*.log | grep memory`
+
+### TTS not reading Russian text
+Use multilingual model: `eleven_flash_v2_5` or `eleven_multilingual_v2`.
+
+### Whisper not transcribing voice messages
+Install whisper: `pip3 install openai-whisper --break-system-packages`
 
 ## Testing Memory
 
