@@ -126,9 +126,68 @@ openclaw pgmem search "your query" --limit 5
 openclaw pgmem count --user <user_id>
 \`\`\`
 
+## Roadmap
+
+- [ ] Support for SQLite with vector extension
+- [ ] Web UI for memory management
+- [ ] Support for more embedding providers (Cohere, HuggingFace)
+- [ ] Batch processing for large files
+- [ ] Export/Import memory data
+- [ ] Memory sharing between sessions
+- [ ] Advanced analytics dashboard
+
+See [GitHub Issues](https://github.com/aister-khmara/openclaw-memory-pgvector/issues) for more details.
+
+---
+
 ## Contributing
 
-Contributions are welcome! Please read our contributing guidelines.
+**Contributions are welcome!** 🎉
+
+### How to Contribute
+
+1. **Fork the repository** on GitHub
+2. **Create a feature branch** for your changes
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+3. **Make your changes** and commit with clear messages
+   ```bash
+   git commit -m "Add: Something amazing"
+   ```
+4. **Push to your fork**
+   ```bash
+   git push origin feature/amazing-feature
+   ```
+5. **Create a Pull Request** targeting the `main` branch
+
+### Development Setup
+
+```bash
+# Clone your fork
+git clone https://github.com/aister-khmara/openclaw-memory-pgvector.git
+cd openclaw-memory-pgvector
+
+# Install dependencies
+npm install
+npm run build
+
+# Run tests (if available)
+npm test
+```
+
+### Code Style
+
+- Use TypeScript for new features
+- Follow existing code patterns
+- Add tests for new functionality
+- Update documentation as needed
+
+### Questions?
+
+Open an issue for bugs or feature requests. We're happy to help!
+
+📖 **[Full Documentation →](https://github.com/aister-khmara/openclaw-memory-pgvector/wiki)**
 
 ## License
 
