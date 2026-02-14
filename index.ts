@@ -121,7 +121,7 @@ type RequestContext = {
 // ============================================================================
 
 class MemoryDB {
-  private pool: pg.Pool;
+  pool: pg.Pool;
   private initPromise: Promise<void> | null = null;
 
   constructor(
@@ -302,6 +302,116 @@ class MemoryDB {
 
   async close(): Promise<void> {
     await this.pool.end();
+  }
+
+  async saveRequest(params: {
+    userId: string;
+    sessionId?: string;
+    messageText: string;
+    embedding?: number[];
+    telegramMessageId?: bigint;
+    telegramChatId?: bigint;
+    hasFiles?: boolean;
+  }): Promise<string> {
+    await this.ensureInitialized();
+    const id = randomUUID();
+    const embeddingStr = params.embedding ? `[${params.embedding.join(",")}]` : null;
+
+    await this.pool.query(
+      `INSERT INTO requests (id, user_id, session_id, message_text, embedding, telegram_message_id, telegram_chat_id, has_files)
+       VALUES ($1, $2, $3, $4, $5::vector, $6, $7, $8)`,
+      [id, params.userId, params.sessionId, params.messageText, embeddingStr, 
+       params.telegramMessageId, params.telegramChatId, params.hasFiles || false],
+    );
+    return id;
+  }
+
+  async saveResponse(params: {
+    requestId: string;
+    responseText: string;
+    embedding?: number[];
+    summary?: string;
+    summaryEmbedding?: number[];
+    modelUsed?: string;
+    inputTokens?: number;
+    outputTokens?: number;
+  }): Promise<string> {
+    await this.ensureInitialized();
+    const id = randomUUID();
+    const embeddingStr = params.embedding ? `[${params.embedding.join(",")}]` : null;
+    const summaryEmbeddingStr = params.summaryEmbedding ? `[${params.summaryEmbedding.join(",")}]` : null;
+
+    await this.pool.query(
+      `INSERT INTO responses (id, request_id, response_text, embedding, summary, summary_embedding, model_used, input_tokens, output_tokens)
+       VALUES ($1, $2, $3, $4::vector, $5, $6::vector, $7, $8, $9)`,
+      [id, params.requestId, params.responseText, embeddingStr,
+       params.summary, summaryEmbeddingStr, params.modelUsed, 
+       params.inputTokens, params.outputTokens],
+    );
+    return id;
+  }
+
+  async saveReasoning(params: {
+    requestId: string;
+    reasoningText: string;
+    embedding?: number[];
+    thinkingModel?: string;
+    thinkingTokens?: number;
+  }): Promise<string> {
+    await this.ensureInitialized();
+    const id = randomUUID();
+    const embeddingStr = params.embedding ? `[${params.embedding.join(",")}]` : null;
+
+    await this.pool.query(
+      `INSERT INTO reasoning (id, request_id, reasoning_text, embedding, thinking_model, thinking_tokens)
+       VALUES ($1, $2, $3, $4::vector, $5, $6)`,
+      [id, params.requestId, params.reasoningText, embeddingStr,
+       params.thinkingModel, params.thinkingTokens],
+    );
+    return id;
+  }
+
+  async searchContext(
+    embedding: number[],
+    userId: string,
+    limit = 10,
+    minScore = 0.25,
+  ): Promise<Array<{ source: string; content: string; similarity: number }>> {
+    await this.ensureInitialized();
+    const embeddingStr = `[${embedding.join(",")}]`;
+
+    const result = await this.pool.query(
+      `SELECT * FROM search_context($1::vector, $2, $3, $4)`,
+      [embeddingStr, userId, limit, minScore],
+    );
+
+    return result.rows.map((row) => ({
+      source: row.source,
+      content: row.content,
+      similarity: row.similarity,
+    }));
+  }
+
+  async getStats(): Promise<{
+    totalMemories: number;
+    totalRequests: number;
+    totalResponses: number;
+    totalReasoning: number;
+    totalFiles: number;
+    totalChunks: number;
+    uniqueUsers: number;
+  }> {
+    await this.ensureInitialized();
+    const result = await this.pool.query("SELECT * FROM conversation_stats");
+    return {
+      totalMemories: parseInt(result.rows[0]?.total_memories || "0"),
+      totalRequests: parseInt(result.rows[0]?.total_requests || "0"),
+      totalResponses: parseInt(result.rows[0]?.total_responses || "0"),
+      totalReasoning: parseInt(result.rows[0]?.total_reasoning || "0"),
+      totalFiles: parseInt(result.rows[0]?.total_files || "0"),
+      totalChunks: parseInt(result.rows[0]?.total_chunks || "0"),
+      uniqueUsers: parseInt(result.rows[0]?.unique_users || "0"),
+    };
   }
 }
 
@@ -674,6 +784,48 @@ const memoryPlugin = {
       { name: "memory_forget" },
     );
 
+    api.registerTool(
+      {
+        name: "search_context",
+        label: "Search Context",
+        description:
+          "Search across all stored context: memories, requests, responses, and files. Returns most relevant matches.",
+        parameters: Type.Object({
+          query: Type.String({ description: "Search query" }),
+          limit: Type.Optional(Type.Number({ description: "Max results (default: 10)" })),
+        }),
+        async execute(_toolCallId, params, context) {
+          const { query, limit = 10 } = params as {
+            query: string;
+            limit?: number;
+          };
+
+          const userId = context?.sender?.id || "default";
+          const vector = await embeddings.embed(query, "query");
+          const results = await db.searchContext(vector, userId, limit, 0.2);
+
+          if (results.length === 0) {
+            return {
+              content: [{ type: "text", text: "No relevant context found." }],
+              details: { count: 0 },
+            };
+          }
+
+          const text = results
+            .map((r, i) => `${i + 1}. [${r.source}] ${r.content.slice(0, 200)}... (${(r.similarity * 100).toFixed(0)}%)`)
+            .join("\n\n");
+
+          return {
+            content: [
+              { type: "text", text: `Found ${results.length} context items:\n\n${text}` },
+            ],
+            details: { count: results.length, results },
+          };
+        },
+      },
+      { name: "search_context" },
+    );
+
     // ========================================================================
     // CLI Commands
     // ========================================================================
@@ -708,10 +860,17 @@ const memoryPlugin = {
 
         memory
           .command("stats")
-          .description("Show memory statistics")
+          .description("Show conversation statistics")
           .action(async () => {
-            const count = await db.count();
-            console.log(`Total memories: ${count}`);
+            const stats = await db.getStats();
+            console.log(`\n📊 Conversation Statistics:`);
+            console.log(`   Memories:  ${stats.totalMemories}`);
+            console.log(`   Requests:  ${stats.totalRequests}`);
+            console.log(`   Responses: ${stats.totalResponses}`);
+            console.log(`   Reasoning: ${stats.totalReasoning}`);
+            console.log(`   Files:     ${stats.totalFiles}`);
+            console.log(`   Chunks:    ${stats.totalChunks}`);
+            console.log(`   Users:     ${stats.uniqueUsers}\n`);
           });
       },
       { commands: ["pgmem"] },
@@ -729,23 +888,35 @@ const memoryPlugin = {
         }
 
         const userId = event.sender?.id || "default";
+        const sessionId = event.sessionId;
 
         try {
           const vector = await embeddings.embed(prompt, "query");
-          const results = await db.search(vector, userId, 3, 0.3);
+          
+          // Save request
+          await db.saveRequest({
+            userId,
+            sessionId,
+            messageText: prompt.slice(0, 4000),
+            embedding: vector,
+          });
+          api.logger.info(`memory-pgvector: saved request from ${userId}`);
 
-          if (results.length === 0) {
+          // Search context across all sources
+          const context = await db.searchContext(vector, userId, 5, 0.25);
+
+          if (context.length === 0) {
             return;
           }
 
-          const memoryContext = results
-            .map((r) => `- [${r.entry.memoryType}] ${r.entry.content}`)
+          const contextText = context
+            .map((c) => `[${c.source}] ${c.content.slice(0, 300)}`)
             .join("\n");
 
-          api.logger.info(`memory-pgvector: injecting ${results.length} memories into context`);
+          api.logger.info(`memory-pgvector: injecting ${context.length} context items`);
 
           return {
-            prependContext: `<relevant-memories>\nThe following memories may be relevant:\n${memoryContext}\n</relevant-memories>`,
+            prependContext: `<relevant-context>\nRelated information:\n${contextText}\n</relevant-context>`,
           };
         } catch (err) {
           api.logger.warn(`memory-pgvector: recall failed: ${String(err)}`);
@@ -764,40 +935,82 @@ const memoryPlugin = {
         const sessionId = e.sessionId;
 
         try {
-          const texts: string[] = [];
+          let userText = "";
+          let assistantText = "";
+          let reasoningText = "";
+
           for (const msg of e.messages!) {
             if (!msg || typeof msg !== "object") continue;
             const msgObj = msg as Record<string, unknown>;
             const role = msgObj.role;
-            if (role !== "user" && role !== "assistant") continue;
-
+            
             const content = msgObj.content;
+            let text = "";
+            
             if (typeof content === "string") {
-              texts.push(content);
-              continue;
-            }
-
-            if (Array.isArray(content)) {
+              text = content;
+            } else if (Array.isArray(content)) {
               for (const block of content) {
-                if (
-                  block &&
-                  typeof block === "object" &&
-                  "type" in block &&
-                  (block as Record<string, unknown>).type === "text" &&
-                  "text" in block &&
-                  typeof (block as Record<string, unknown>).text === "string"
-                ) {
-                  texts.push((block as Record<string, unknown>).text as string);
+                if (block && typeof block === "object" && "type" in block) {
+                  const blk = block as Record<string, unknown>;
+                  if (blk.type === "text" && "text" in blk) {
+                    text += (blk.text as string) + "\n";
+                  }
+                  if (blk.type === "thinking" && "thinking" in blk) {
+                    reasoningText += (blk.thinking as string) + "\n";
+                  }
                 }
               }
             }
+
+            if (role === "user") userText = text;
+            if (role === "assistant") assistantText = text;
           }
 
-          const toCapture = texts.filter((text) => text && shouldCapture(text));
-          if (toCapture.length === 0) return;
+          // Get latest request for this user
+          const latestRequest = await db.pool.query(
+            `SELECT id FROM requests WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+            [userId]
+          );
+          const requestId = latestRequest.rows[0]?.id;
 
+          if (requestId && assistantText) {
+            // Save response
+            const responseEmbedding = await embeddings.embed(assistantText.slice(0, 2000), "passage");
+            const summary = assistantText.length > 500 
+              ? assistantText.slice(0, 500) + "..." 
+              : assistantText;
+            const summaryEmbedding = await embeddings.embed(summary, "passage");
+
+            await db.saveResponse({
+              requestId,
+              responseText: assistantText,
+              embedding: responseEmbedding,
+              summary,
+              summaryEmbedding,
+              modelUsed: "glm-5",
+            });
+            api.logger.info(`memory-pgvector: saved response`);
+
+            // Save reasoning if present
+            if (reasoningText) {
+              const reasoningEmbedding = await embeddings.embed(reasoningText.slice(0, 2000), "passage");
+              await db.saveReasoning({
+                requestId,
+                reasoningText,
+                embedding: reasoningEmbedding,
+                thinkingModel: "glm-5",
+              });
+              api.logger.info(`memory-pgvector: saved reasoning`);
+            }
+          }
+
+          // Capture important facts as memories
+          const texts = [userText, assistantText].filter(Boolean);
+          const toCapture = texts.filter((text) => text && shouldCapture(text));
+          
           let stored = 0;
-          for (const text of toCapture.slice(0, 3)) {
+          for (const text of toCapture.slice(0, 2)) {
             const memoryType = detectCategory(text);
             const vector = await embeddings.embed(text, "passage");
 
