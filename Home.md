@@ -7,6 +7,9 @@ Welcome to the OpenClaw Memory Plugin documentation!
 - [Installation Guide](Installation)
 - [Configuration](Configuration)
 - [API Reference](API-Reference)
+- [Performance Tuning](Performance)
+- [Security Guide](Security)
+- [Examples](Examples)
 - [Troubleshooting](Troubleshooting)
 - [Документация на русском](Документация-(RU))
 

@@ -34,6 +34,9 @@
 | [Installation Guide](https://github.com/aister-khmara/openclaw-memory-pgvector/wiki/Installation) | Step-by-step setup instructions |
 | [Configuration](https://github.com/aister-khmara/openclaw-memory-pgvector/wiki/Configuration) | All configuration options |
 | [API Reference](https://github.com/aister-khmara/openclaw-memory-pgvector/wiki/API-Reference) | SQL functions and CLI commands |
+| [Performance Tuning](https://github.com/aister-khmara/openclaw-memory-pgvector/wiki/Performance) | Optimize for your use case |
+| [Security Guide](https://github.com/aister-khmara/openclaw-memory-pgvector/wiki/Security) | Best practices for data protection |
+| [Examples](https://github.com/aister-khmara/openclaw-memory-pgvector/wiki/Examples) | Code examples and use cases |
 | [Troubleshooting](https://github.com/aister-khmara/openclaw-memory-pgvector/wiki/Troubleshooting) | Common issues and solutions |
 | [Документация (RU)](https://github.com/aister-khmara/openclaw-memory-pgvector/wiki/Документация-(RU)) | Полная документация на русском |
 
